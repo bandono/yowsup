@@ -1,4 +1,7 @@
 '''
+Copyright (c) <2014> Arif Kusbandono <arif.imap@gmail.com>
+This has been a modification from ListenerClient.py in yowsup/Examples:
+
 Copyright (c) <2012> Tarek Galal <tare2.galal@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this 
@@ -32,12 +35,15 @@ from Yowsup.connectionmanager import YowsupConnectionManager
 
 class WhatsappListenerThrower(object):
 	
-	def __init__(self, keepAlive = False, sendReceipts = False, recipientNumber = '0', chatLog = 'yowsup-chat.log'):
+	def __init__(self, keepAlive = False, sendReceipts = False, \
+		recipientNumber = '0', chatLog = 'yowsup-chat.log', \
+		connStatFile="yowsup-conn.status"):
 		
 		# in class 'global' constants
 		self.sendReceipts = sendReceipts
 		self.recipientNumber = recipientNumber
 		self.chatLog = chatLog
+		self.connStatFile = connStatFile
 		
 		connectionManager = YowsupConnectionManager()
 		connectionManager.setAutoPong(keepAlive)
@@ -56,8 +62,9 @@ class WhatsappListenerThrower(object):
 	def login(self, username, password):
 		self.username = username
 		self.methodsInterface.call("auth_login", (username, password))
+		sys.stdin = open('/dev/tty')
 		while openStatus:
-			raw_input()
+			sys.stdin.read
 
 
 	def onAuthSuccess(self, username):
@@ -69,9 +76,8 @@ class WhatsappListenerThrower(object):
 
 	def onDisconnected(self, reason):
 		print("Disconnected because %s" %reason)
-		print("hell")
-		#if reason == 'close':
-		sys.exit("exiting")
+		with open(self.connStatFile, 'a') as connstat:
+				connstat.write("Disconnected because %s\n" %reason)
 
 	def onMessageReceived(self, messageId, jid, messageContent, timestamp, wantsReceipt, pushName, isBroadCast):
 		formattedDate = datetime.datetime.fromtimestamp(timestamp).strftime('%d-%m-%Y %H:%M')
