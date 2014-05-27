@@ -25,7 +25,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import os
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.sys.path.insert(0,parentdir)
-import datetime, sys
+import datetime, sys, csv
 openStatus = True
 
 if sys.version_info >= (3, 0):
@@ -37,13 +37,16 @@ class WhatsappListenerThrower(object):
 	
 	def __init__(self, keepAlive = False, sendReceipts = False, \
 		recipientNumber = '0', chatLog = 'yowsup-chat.log', \
-		connStatFile="yowsup-conn.status"):
+		connStatFile = "yowsup-conn.status", autoReplyConst = 0, \
+		autoReplyMsg = 'This is a bot auto-reply' ):
 		
 		# in class 'global' constants
 		self.sendReceipts = sendReceipts
 		self.recipientNumber = recipientNumber
 		self.chatLog = chatLog
 		self.connStatFile = connStatFile
+		self.autoReplyConst = autoReplyConst
+		self.autoReplyMsg = autoReplyMsg
 		
 		connectionManager = YowsupConnectionManager()
 		connectionManager.setAutoPong(keepAlive)
@@ -57,7 +60,20 @@ class WhatsappListenerThrower(object):
 		self.signalsInterface.registerListener("disconnected", self.onDisconnected)
 		
 		self.cm = connectionManager
-    
+
+	def __lastRx(self, lastjid, lastnixtime, waitconst):
+		with open(self.chatLog, 'r') as csvfile:
+			reader = csv.reader(csvfile, delimiter=',')
+			for row in reader:
+				if len(row) == 4:
+					nixtime, jid, timestamp, message = row
+					nixtime = int(nixtime)
+					if jid == lastjid:
+						lastmatchtime = nixtime
+			if lastnixtime > lastmatchtime + waitconst:
+				return 'found'
+			else:
+				return 'none'
 	
 	def login(self, username, password):
 		self.username = username
@@ -92,6 +108,17 @@ class WhatsappListenerThrower(object):
 		sanitizedMessage = sanitizedMessage.replace('"','\q')
 		sanitizedMessage = sanitizedMessage.replace(',',';')
 		sanitizedMessage = "\\n".join(sanitizedMessage.split("\n"))
+		
+		# If auto reply period is set, we will send an auto reply message
+		# only if the last message receive already pass some period of time
+		# from previous message
+		# We find out by scanning chat log to find last timestamp
+		# from current sender JID
+		if self.autoReplyConst != 0:
+			if self.__lastRx(jid, timestamp, self.autoReplyConst) == 'found':
+				self.methodsInterface.call("message_send", (jid, self.autoReplyMsg))
+		
+		# append messaging to chat log
 		with open(self.chatLog, 'a') as chatlog:
 				chatlog.write("%s,%s,%s,%s\n"%(timestamp, jid, formattedDate, sanitizedMessage))
 				
