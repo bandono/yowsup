@@ -104,5 +104,7 @@ if credentials:
         countryCode, phoneNumber = dissected
 
     Debugger.enabled = False
-    wa = WhatsappListenerThrower(keepAlive = True, sendReceipts = True, recipientNumber = '62xxxxxxxxx')
+    wa = WhatsappListenerThrower(keepAlive = True, sendReceipts = True, \
+		recipientNumber = '62xxxxxxxxx', autoReplyConst = 60, \
+		autoReplyMsg = 'This is XXXX\'s bot. Your message will be forwarded to +62xxxxxxxxx' )
     wa.login(login, password)
